@@ -290,6 +290,7 @@ export class Gantt implements IVisual {
         PlusMinusColor: "#5F6B6D",
         CollapseAllTextColor: "#aaa",
         MilestoneLineColor: "#ccc",
+        MilestoneLineWidth: 2,
         TaskCategoryLabelsRectColor: "#fafafa",
         TaskLineWidth: 15,
         IconMargin: 12,
@@ -1570,7 +1571,14 @@ export class Gantt implements IVisual {
         this.renderTasks(groupedTasks);
         this.updateTaskLabels(groupedTasks, settings.taskLabels.width);
         this.updateElementsPositions(this.margin);
-        this.createMilestoneLine(groupedTasks);
+
+        if (settings.milestones.showLines) {
+            this.createMilestoneLine(groupedTasks);
+        } else {
+            this.chartGroup
+                .selectAll(Selectors.ChartLine.selectorName)
+                .remove();
+        }
 
         if (settings.general.scrollToCurrentTime && this.hasNotNullableDates) {
             this.scrollToMilestoneLine(axisLength);
@@ -2904,7 +2912,11 @@ export class Gantt implements IVisual {
             .style("stroke", (line: Line) => {
                 let color = line.x1 === this.timeScale(timestamp) ? todayColor : Gantt.DefaultValues.MilestoneLineColor;
                 return this.colorHelper.getHighContrastColor("foreground", color);
-            });
+            })
+            .style("stroke-width", (line: Line) => {
+                const settingTodayWidth = this.viewModel.settings.dateType.todayWidth;
+                return line.x1 === this.timeScale(timestamp) ? settingTodayWidth : Gantt.DefaultValues.MilestoneLineWidth;
+             });
 
         this.renderTooltip(chartLineSelectionMerged);
 

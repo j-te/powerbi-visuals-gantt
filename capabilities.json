@@ -596,6 +596,13 @@
             "description": "Display milestones options",
             "descriptionKey": "Visual_Description_Milestones",
             "properties": {
+                "showLines": {
+                    "displayName": "Show milestone lines",
+                    "description": "Display the vertical milestone lines",
+                    "type": {
+                        "bool": true
+                    }
+                },
                 "fill": {
                     "displayName": "Fill",
                     "displayNameKey": "Visual_Fill",
@@ -851,6 +858,13 @@
                                 "displayNameKey": "Visual_DateType_Year"
                             }
                         ]
+                    }
+                },
+                "todayWidth": {
+                    "displayName": "Today's Line Width",
+                    "displayNameKey": "Visual_DateType_TodayWidth",
+                    "type": {
+                        "numeric": true
                     }
                 },
                 "todayColor": {

@@ -57,6 +57,7 @@ export class CollapsedTasks {
 
 export class MilestonesSettings {
     show: boolean = true;
+    showLines: boolean = true;
 }
 
 export class DaysOffSettings {
@@ -104,6 +105,7 @@ export class DateTypeSettings {
     // tslint:disable-next-line:no-reserved-keywords
     type: DateTypes = DateTypes.Week;
     todayColor: string = "#000000";
+    todayWidth: number = 2;
     axisColor: string = "#000000";
     axisTextColor: string = "#000000";
 }

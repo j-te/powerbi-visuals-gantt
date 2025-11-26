@@ -23,23 +23,17 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-import * as d3 from "d3";
-import * as _ from "lodash";
+import powerbi from "powerbi-visuals-api";
+import { Selection as d3Selection } from 'd3-selection';
 
-type Selection<T1, T2 = T1> = d3.Selection<any, T1, any, T2>;
-
-import { interactivityBaseService as interactivityService } from "powerbi-visuals-utils-interactivityutils";
-import IInteractiveBehavior = interactivityService.IInteractiveBehavior;
-import IInteractivityService = interactivityService.IInteractivityService;
-import ISelectionHandler = interactivityService.ISelectionHandler;
+import ISelectionId = powerbi.visuals.ISelectionId;
+import ISelectionManager = powerbi.extensibility.ISelectionManager;
 
 import { Task, GroupedTask } from "./interfaces";
-import { IBehaviorOptions } from "powerbi-visuals-utils-interactivityutils/lib/interactivityBaseService";
+import { LegendDataPoint } from "powerbi-visuals-utils-chartutils/lib/legend/legendInterfaces";
 
 export const DimmedOpacity: number = 0.4;
 export const DefaultOpacity: number = 1.0;
-
-const getEvent = () => require("d3-selection").event;
 
 export function getFillOpacity(
     selected: boolean,
@@ -54,86 +48,202 @@ export function getFillOpacity(
     return DefaultOpacity;
 }
 
-export interface BehaviorOptions extends IBehaviorOptions<Task> {
-    clearCatcher: Selection<any>;
-    taskSelection: Selection<Task>;
-    legendSelection: Selection<any>;
-    interactivityService: IInteractivityService<Task>;
+export function getLegendFillOpacity(selected: boolean, hasSelection: boolean): number {
+    if ((hasSelection && !selected)) {
+        return DimmedOpacity;
+    }
+
+    return DefaultOpacity;
+}
+
+export interface BaseDataPoint {
+    selected: boolean;
+}
+
+export interface SelectableDataPoint extends BaseDataPoint {
+    identity: ISelectionId;
+    specificIdentity?: ISelectionId;
+}
+
+
+export interface BehaviorOptions {
+    dataPoints: Task[];
+    legendDataPoints: LegendDataPoint[];
+    hasHighlights: boolean;
+    clearCatcher: d3Selection<HTMLElement, null, null, undefined>;
+    taskSelection: d3Selection<SVGGElement, Task, any, any>;
+    legendSelection: d3Selection<SVGGElement, LegendDataPoint, any, any>;
     subTasksCollapse: {
-        selection: Selection<any>;
+        selection: d3Selection<SVGGElement, GroupedTask, any, any>;
         callback: (groupedTask: GroupedTask) => void;
     };
-    allSubtasksCollapse: {
-        selection: Selection<any>;
+    allSubTasksCollapse: {
+        selection: d3Selection<SVGGElement, any, any, any>;
+        arrowSelection: d3Selection<SVGRectElement, any, any, any>;
         callback: () => void;
     };
 }
 
-export class Behavior implements IInteractiveBehavior {
+export class Behavior {
+    private selectionManager: ISelectionManager;
     private options: BehaviorOptions;
 
-    public bindEvents(options: BehaviorOptions, selectionHandler: ISelectionHandler) {
-        this.options = options;
-        let clearCatcher = options.clearCatcher;
-
-        options.taskSelection.on("click", (dataPoint: Task) => {
-            const event: MouseEvent = d3.event as MouseEvent;
-            selectionHandler.handleSelection(dataPoint, event.ctrlKey);
-
-            event.stopPropagation();
-        });
-
-        options.legendSelection.on("click", (d: any) => {
-            if (!d.selected) {
-
-                selectionHandler.handleSelection(d, getEvent().ctrlKey);
-                (d3.event as MouseEvent).stopPropagation();
-
-                let selectedType: string = d.tooltip;
-                options.taskSelection.each((d: Task) => {
-                    if (d.taskType === selectedType && d.parent && !d.selected) {
-                        selectionHandler.handleSelection(d, getEvent().ctrlKey);
-                    }
-                });
-            } else {
-                selectionHandler.handleClearSelection();
-            }
-        });
-
-        options.subTasksCollapse.selection.on("click", (d: GroupedTask) => {
-            if (!_.flatten(d.tasks.map(task => task.children)).length) {
-                return;
-            }
-
-            (d3.event as MouseEvent).stopPropagation();
-            options.subTasksCollapse.callback(d);
-        });
-
-        options.allSubtasksCollapse.selection.on("click", () => {
-            (d3.event as MouseEvent).stopPropagation();
-            options.allSubtasksCollapse.callback();
-        });
-
-        clearCatcher.on("click", () => {
-            selectionHandler.handleClearSelection();
+    constructor(selectionManager: ISelectionManager) {
+        this.selectionManager = selectionManager;
+        this.selectionManager.registerOnSelectCallback((selectionIds?: ISelectionId[]) => {
+            this.onSelectCallback(selectionIds);
         });
     }
 
-    public renderSelection(hasSelection: boolean) {
-        const {
-            taskSelection,
-            interactivityService,
-        } = this.options;
+    public get isInitialized(): boolean {
+        return !!this.options;
+    }
 
-        const hasHighlights: boolean = interactivityService.hasSelection();
+    public bindEvents(options: BehaviorOptions) {
+        this.options = options;
 
-        taskSelection.style("opacity", (dataPoint: Task) => {
-            return getFillOpacity(
-                dataPoint.selected,
-                dataPoint.highlight,
-                !dataPoint.highlight && hasSelection,
-                !dataPoint.selected && hasHighlights
-            );
+        this.applySelectionStateToDataPoints();
+
+        this.handleClickEvents();
+        this.handleContextMenuEvents();
+        this.handleKeyboardEvents();
+    }
+
+    public get hasSelection(): boolean {
+        return this.selectionManager.hasSelection();
+    }
+
+    private handleClickEvents(): void {
+        this.options.taskSelection.on("click", (event: MouseEvent, dataPoint: Task) => {
+            event.stopPropagation();
+            this.selectDataPoint(dataPoint, event.ctrlKey || event.metaKey || event.shiftKey);
         });
+
+        this.options.legendSelection.on("click", (event: MouseEvent, dataPoint: LegendDataPoint) => {
+            event.stopPropagation();
+            this.selectDataPoint(dataPoint, event.ctrlKey || event.metaKey || event.shiftKey);
+        });
+
+        this.options.subTasksCollapse.selection.on("click", (event: MouseEvent, dataPoint: GroupedTask) => {
+            if (!dataPoint.tasks.map(task => task.children).flat().length) {
+                return;
+            }
+            event.stopPropagation();
+            this.options.subTasksCollapse.callback(dataPoint);
+        });
+
+        this.options.allSubTasksCollapse.selection.on("click", (event: MouseEvent) => {
+            event.stopPropagation();
+            this.options.allSubTasksCollapse.callback();
+        });
+
+        this.options.clearCatcher.on("click", () => {
+            this.clear();
+        });
+    }
+
+    private handleContextMenuEvents(): void {
+        this.options.taskSelection.on("contextmenu", (event: MouseEvent, dataPoint: Task) => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.selectionManager.showContextMenu(dataPoint ? dataPoint.identity : {}, {
+                x: event.clientX,
+                y: event.clientY,
+            });
+        });
+
+        this.options.legendSelection.on("contextmenu", (event: MouseEvent, dataPoint: LegendDataPoint) => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.selectionManager.showContextMenu(dataPoint ? dataPoint.identity : {}, {
+                x: event.clientX,
+                y: event.clientY,
+            });
+        });
+
+        this.options.clearCatcher.on("contextmenu", (event: MouseEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.selectionManager.showContextMenu(null, {
+                x: event.clientX,
+                y: event.clientY,
+            });
+        });
+    }
+
+    private handleKeyboardEvents(): void {
+        this.options.taskSelection.on("keydown", (event: KeyboardEvent, dataPoint: Task) => {
+            if (event.code === "Enter" || event.code === "Space") {
+                event.preventDefault();
+                this.selectDataPoint(dataPoint, event.ctrlKey || event.metaKey || event.shiftKey);
+            }
+        });
+
+        this.options.subTasksCollapse.selection.on("keydown", (event: KeyboardEvent, dataPoint: GroupedTask) => {
+            if (event.code === "Enter" || event.code === "Space") {
+                event.stopPropagation();
+                event.preventDefault();
+
+                if (!dataPoint.tasks.map(task => task.children).flat().length) {
+                    return;
+                }
+                this.options.subTasksCollapse.callback(dataPoint);
+            }
+        });
+
+        this.options.allSubTasksCollapse.arrowSelection.on("keydown", (event: KeyboardEvent) => {
+            if (event.code === "Enter" || event.code === "Space") {
+                event.stopPropagation();
+                event.preventDefault();
+                this.options.allSubTasksCollapse.callback();
+            }
+        });
+    }
+
+    public renderSelection(hasHighlights?: boolean): void {
+        const hasSelection = this.hasSelection;
+        const hasHighlightsValue = hasHighlights || this.options.hasHighlights;
+
+        this.options.taskSelection.style("opacity", (dataPoint: Task) => getFillOpacity(
+            dataPoint.selected,
+            dataPoint.highlight,
+            hasSelection,
+            hasHighlightsValue,
+        ));
+
+        const legendHasSelection = this.options.legendDataPoints.some((dataPoint: LegendDataPoint) => dataPoint.selected);
+        this.options.legendSelection.style("opacity", (dataPoint: LegendDataPoint) => getLegendFillOpacity(dataPoint.selected, legendHasSelection));
+    }
+
+    private clear(): void {
+        this.selectionManager.clear();
+        this.onSelectCallback();
+    }
+
+    private selectDataPoint(dataPoint: SelectableDataPoint, multiSelect: boolean): void {
+        const selectionIdsToSelect: ISelectionId[] = [dataPoint.identity];
+        this.selectionManager.select(selectionIdsToSelect, multiSelect);
+        this.onSelectCallback();
+    }
+
+    private onSelectCallback(selectionIds?: ISelectionId[]): void {
+        this.applySelectionStateToDataPoints(selectionIds);
+        this.renderSelection();
+    }
+
+    private applySelectionStateToDataPoints(selectionIds?: ISelectionId[]): void {
+        const selectedIds: ISelectionId[] = selectionIds || <ISelectionId[]>this.selectionManager.getSelectionIds();
+        this.setSelectedToDataPoints(this.options.dataPoints, selectedIds);
+        this.setSelectedToDataPoints(this.options.legendDataPoints, selectedIds);
+    }
+
+    private setSelectedToDataPoints(dataPoints: SelectableDataPoint[] | LegendDataPoint[], ids: ISelectionId[]): void {
+        dataPoints.forEach((dataPoint: SelectableDataPoint | LegendDataPoint) => {
+            dataPoint.selected = this.isDataPointSelected(dataPoint, ids);
+        });
+    }
+
+    private isDataPointSelected(dataPoint: SelectableDataPoint | LegendDataPoint, selectedIds: ISelectionId[]): boolean {
+        return selectedIds.some((selectedId: ISelectionId) => selectedId.includes(<ISelectionId>dataPoint.identity));
     }
 }

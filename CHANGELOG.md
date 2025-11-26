@@ -1,3 +1,148 @@
+## 3.4.3
+### Visual changes
+* Added setting for empty label text
+* Removed the exclusion of empty data from the legend, allowing users to leverage the native "Show items with no data" functionality.
+### Fixes
+* Fix sorting for the tasks
+
+
+## 3.4.2
+### Translations
+* New settings translations
+
+## 3.4.1
+### Fixes
+* Fix general settings
+
+## 3.4.0
+### Visual changes
+* Add persist settings for milestones
+
+## 3.3.0
+### Visual changes
+* Change grouped tasks default sorting
+* Add new "grouped tasks" settings
+* Add different options to display overlapping tasks
+* Add border settings to tasks
+
+## 3.2.0
+### Visual changes
+* Add new card settings for nested category labels
+* Add new card settings for collapse/expand labels
+
+### Code improvements
+* Split formattingSettings file
+
+### Bug fixes
+* Fix legend styles
+* Fix resizing of categry labels
+* Fix Expand/Collapse button overlap
+* Fix settings in high contrast mode
+* Fix clearSelection
+* Fix report page tooltips
+
+## 3.1.1
+* Set category labels background to enabled by default for consistency with previous versions
+* Fix npm vulnerabilities
+
+## 3.1.0
+### Visual changes
+* Add new card settings for background colors
+
+### Code improvements
+* Update outdated packages
+
+## 3.0.14
+### Visual changes
+* Add keyboard focus animation to better visualize focus
+* Add settings to control milestone line type / organize milestones in groups
+* Add report page tooltips support
+* Make clickable elements have "pointer" cursor
+* Make task column draggable
+* Add legend/task labels/data labels font settings
+* Add toggle switch to match data labels colors with legend colors
+* Add axis/task labels background color
+* Make sticky header with axis and "Collapse all" button
+* Make draggable column bigger
+* Add font settings for axis text
+
+### Code improvements
+* Fix task fill gradient and keyboard focus styles
+* Fix sorting tasks when "Group tasks" is enabled
+* Fix the bug with task labels background opacity resetting to 100 when specifying 0 opacity
+* Remove interactivity-utils
+* Apply font settings to "Collapse All/Expand All" button
+* Rename all "Fill" properties to "Color"
+* Enable the support multiple visual selection feature
+* Fix bug when "Days off" were not rendered
+
+
+# 3.0.13
+### Visual changes
+* Add all font settings (italic, bold, etc.) for the "Expand All" button, also make the default value satisfy the contrast ration of 4.6:1
+* Fix visual background color not applying to axis, collapse all button, task labels
+* Add toggle to enable/disable milestones dotted lines and color picker for it's color
+
+### Code improvements
+* Update API to 5.11.0, tools to 5.5.1 and other packages"
+
+## 3.0.12
+* Fix not showing collapse button for parent tasks
+
+## 3.0.11
+# Remove restrictions on legend width
+
+## 3.0.10
+* Fix small task rendering
+
+## 3.0.9
+* Upgrade API to 5.9.0
+* Fix axis position compared to tasks position
+* Increase axis and tasks padding so axis is visible when "Date type" is set to "Hour"
+* Remove magic numbers
+
+## 3.0.8
+* Fix bar start position and axis visibility on scroll
+
+## 3.0.7
+* Fix issue with showing multiple context menus
+* Fix npm vulnerabilities
+
+## 3.0.6
+* Rollback shifted task bars in order to have backwards compatibility
+* NPM vulnerabilities fixed
+
+## 3.0.5
+* Fix issue with disappearing of the task bar
+* Fix issue with shifted task bar when `barsRoundedCorners` is enabled
+
+## 3.0.4
+* Fix issue when milestones were rendered twice
+* Show customized legend name in the tooltips
+* Packages update
+
+## 3.0.3
+* Render "Collapse all" / "Expand all" even if "Category labels" is disabled
+
+## 3.0.2
+* Fix tests
+* Fix label name
+
+## 3.0.1
+* Upgraded to API 5.8.0
+* Fixed bugs related to UI 
+
+## 3.0.0
+* Upgraded to API 5.7.0
+* Dependencies update
+* Major bugs fixes
+* Support Highlight feature add
+* Eslint support
+* Playwright support
+
+## 2.2.5
+* Feature to turn on/off rectangle roundness
+
 ## 2.2.3
 * Completion issue fix
 
@@ -82,7 +227,7 @@
 ## 1.9.4
  * Fixed issue with tooltip duration
  * Fixed issue with invisible task line when duration is 1
- * Renamed "Extra imformation" field bucket to "Tooltips"
+ * Renamed "Extra information" field bucket to "Tooltips"
 
 ## 1.9.3
  * Fixed issue with tooltip duration

@@ -25,13 +25,13 @@
  */
 
 import powerbi from "powerbi-visuals-api";
-import * as _ from "lodash";
 
 import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
 
-import { VisualBuilderBase, getRandomNumber } from "powerbi-visuals-utils-testutils";
+import { VisualBuilderBase } from "powerbi-visuals-utils-testutils";
 import { Task } from "../src/interfaces";
 import { Gantt as VisualClass } from "../src/gantt";
+import { DurationUnit } from "../src/enums";
 
 interface TaskMockParamsInterface {
     id: number;
@@ -53,129 +53,125 @@ export class VisualBuilder extends VisualBuilderBase<VisualClass> {
         return this.visual;
     }
 
-    public get body() {
-        return this.element
-            .children("div.gantt-body");
+    public get body(): HTMLDivElement | null {
+        return this.element.querySelector("div.gantt-body");
     }
 
-    public get mainElement() {
-        return this.body
-            .children("svg.gantt");
+    public get mainElement(): SVGSVGElement | null {
+        return this.body?.querySelector("svg.gantt") || null;
     }
 
-    public get collapseAllRect() {
-        return this.mainElement
-            .children("g.task-lines")
-            .children("g.collapse-all");
+    public get collapseAllRect(): SVGGElement | null {
+        return this.mainElement?.querySelector<SVGGElement>("g.collapse-all") || null;
     }
 
-    public get collapseAllArrow() {
-        return this.collapseAllRect
-            .children(".collapse-all-arrow");
+    public get collapseAllArrow(): SVGSVGElement | null {
+        return this.collapseAllRect?.querySelector<SVGSVGElement>("svg.collapse-all-arrow") || null;
     }
 
-    public get chartLine() {
-        return this.chart
-            .children("line.chart-line");
+    public get axis(): SVGGElement | null {
+        return this.mainElement?.querySelector("g.axis") || null;
     }
 
-    public get axis() {
-        return this.mainElement
-            .children("g.axis");
+    public get axisBackgroundRect(): SVGRectElement | null {
+        return this.axis?.querySelector("rect") || null;
     }
 
-    public get axisBackgroundRect() {
-        return this.axis
-            .children("rect");
+    public get axisTicks(): SVGGElement[] {
+        if (!this.axis) {
+            return [];
+        }
+
+        return Array.from(this.axis.querySelectorAll("g.tick"));
     }
 
-    public get axisTicks() {
-        return this.axis
-            .children("g.tick");
+    public get axisTicksLine(): SVGLineElement[] {
+        return this.axisTicks.map((element) => element.querySelector("line")!);
     }
 
-    public get axisTicksLine() {
-        return this.axisTicks
-            .children("line");
+    public get axisTicksText(): SVGTextElement[] {
+        return this.axisTicks.map((element) => element.querySelector("text")!);
     }
 
-    public get axisTicksText() {
-        return this.axisTicks
-            .children("text");
+    public get chart(): SVGGElement | null {
+        return this.mainElement?.querySelector("g.chart") || null;
     }
 
-    public get chart() {
-        return this.mainElement
-            .children("g.chart");
+    public get chartLine(): SVGLineElement[] {
+        if (!this.chart) {
+            return [];
+        }
+        return Array.from(this.chart.querySelectorAll("line.chart-line"));
     }
 
-    public get taskLine() {
-        return this.tasks
-            .children("rect.task-lines");
+    public get taskLines(): SVGGElement | null {
+        return this.mainElement?.querySelector("g.task-lines") || null;
     }
 
-    public get taskLineRect() {
-        return this.mainElement
-            .children("g.task-lines")
-            .children("rect.task-lines-rect");
+    public get taskLabels(): SVGGElement[] {
+        if (!this.taskLines) {
+            return [];
+        }
+
+        return Array.from(this.taskLines.querySelectorAll("g.label"));
     }
 
-    public get taskDaysOffRect() {
-        return this.tasks
-            .children("path.task-days-off");
+    public get taskLabelsText(): SVGTextElement[] {
+        return this.taskLabels.map((element) => element.querySelector("text")!);
     }
 
-    public get taskLabels() {
-        return this.mainElement
-            .children("g.task-lines")
-            .children("g.label");
+    public get taskLineRect(): SVGRectElement | null {
+        return this.taskLines?.querySelector("rect.task-lines-rect") || null;
     }
 
-    public get taskLabelsText() {
-        return this.mainElement
-            .children("g.task-lines")
-            .find("g.label text");
+    public get tasksGroups(): SVGGElement[] {
+        if (!this.chart) return [];
+
+        const tasks = this.chart.querySelector<SVGGElement>("g.tasks");
+        if (!tasks) return [];
+
+        const taskGroups = tasks.querySelectorAll<SVGGElement>("g.task-group");
+        return Array.from(taskGroups);
     }
 
-    public get tasksGroups() {
-        return this.chart
-            .children("g.tasks")
-            .children("g.task-group");
+    public get tasks(): SVGGElement[] {
+        return this.tasksGroups.map((element) => element.querySelector<SVGGElement>("g.task")!);
     }
 
-    public get tasks() {
-        return this.tasksGroups
-            .children("g.task");
+    public get taskDaysOffRect(): (SVGPathElement | null)[] {
+        return this.tasks.map((element) => element.querySelector<SVGPathElement>("path.task-days-off"));
     }
 
-    public get milestones() {
-        return this.tasks
-            .children("g.task-milestone")
-            .children("path");
+    public get milestones(): (SVGPathElement | null)[] {
+        const milestones = this.tasks
+            .map((element) => element.querySelector<SVGGElement>("g.task-milestone")?.querySelectorAll("path"))
+            .filter((element) => element != null);
+
+        const paths = milestones.reduce((acc: SVGPathElement[], curr: NodeListOf<SVGPathElement>) => acc.concat(Array.from(curr)), []);
+        return paths;
     }
 
-    public get taskRect() {
-        return this.tasks
-            .children("path.task-rect");
+    public get taskRect(): (SVGPathElement | null)[] {
+        return this.tasks.map((element) => element.querySelector<SVGPathElement>("path.task-rect"));
     }
 
-    public get taskResources() {
-        return this.tasks
-            .children("text.task-resource");
+    public get taskResources(): SVGTextElement[] {
+        const resources = this.tasks.map((element) => element.querySelectorAll<SVGTextElement>("text.task-resource"));
+        const result = resources.reduce((acc: SVGTextElement[], curr: NodeListOf<SVGTextElement>) => acc.concat(Array.from(curr)), []);
+        return result;
     }
 
-    public get taskProgress() {
-        return this.tasks
-            .children("path.task-progress");
+    public get taskProgress(): SVGLinearGradientElement[] {
+        const gradients = this.tasks.map((element) => element.querySelectorAll<SVGLinearGradientElement>("linearGradient.task-progress"));
+        const result = gradients.reduce((acc: SVGLinearGradientElement[], curr: NodeListOf<SVGLinearGradientElement>) => acc.concat(Array.from(curr)), []);
+        return result;
     }
 
-    public get legendGroup() {
-        return this.element
-            .children("svg.legend")
-            .children("g#legendGroup");
+    public get legendGroup(): SVGGElement | null {
+        return this.element.querySelector('.legend #legendGroup');
     }
 
-    public downgradeDurationUnit(tasks: any, durationUnit: string) {
+    public downgradeDurationUnit(tasks: any, durationUnit: DurationUnit) {
         VisualClass.downgradeDurationUnitIfNeeded(tasks, durationUnit);
     }
 
@@ -223,48 +219,48 @@ export class VisualBuilder extends VisualBuilderBase<VisualClass> {
     }
 
     public static getDowngradeDurationUnitMocks() {
-        const GanttDurationUnitType = [
-            "second",
-            "minute",
-            "hour",
-            "day",
+        const GanttDurationUnitType: DurationUnit[] = [
+            DurationUnit.Second,
+            DurationUnit.Minute,
+            DurationUnit.Hour,
+            DurationUnit.Day,
         ];
 
-        let downgradeDurationUnitMock = {
+        const downgradeDurationUnitMock = {
             days: {
                 "data": [
-                    { "unit": GanttDurationUnitType.indexOf("day"), "duration": 1.5 },
-                    { "unit": GanttDurationUnitType.indexOf("day"), "duration": 0.84 }
+                    { "unit": GanttDurationUnitType.indexOf(DurationUnit.Day), "duration": 1.5 },
+                    { "unit": GanttDurationUnitType.indexOf(DurationUnit.Day), "duration": 0.84 }
                 ],
                 "expected": [
-                    "hour",
-                    "second"
+                    DurationUnit.Hour,
+                    DurationUnit.Second
                 ]
             },
             hours: {
                 "data": [
-                    { "unit": GanttDurationUnitType.indexOf("hour"), "duration": 0.05 },
-                    { "unit": GanttDurationUnitType.indexOf("hour"), "duration": 0.005 }
+                    { "unit": GanttDurationUnitType.indexOf(DurationUnit.Hour), "duration": 0.05 },
+                    { "unit": GanttDurationUnitType.indexOf(DurationUnit.Hour), "duration": 0.005 }
                 ],
                 "expected": [
-                    "minute",
-                    "second"
+                    DurationUnit.Minute,
+                    DurationUnit.Second
                 ]
             },
             minutes: {
                 "data": [
-                    { "unit": GanttDurationUnitType.indexOf("minute"), "duration": 0.01 }
+                    { "unit": GanttDurationUnitType.indexOf(DurationUnit.Minute), "duration": 0.01 }
                 ],
                 "expected": [
-                    "second"
+                    DurationUnit.Second
                 ]
             },
             seconds: {
                 "data": [
-                    { "unit": GanttDurationUnitType.indexOf("second"), "duration": 0.5 }
+                    { "unit": GanttDurationUnitType.indexOf(DurationUnit.Second), "duration": 0.5 }
                 ],
                 "expected": [
-                    "second"
+                    DurationUnit.Second
                 ]
             }
         };
